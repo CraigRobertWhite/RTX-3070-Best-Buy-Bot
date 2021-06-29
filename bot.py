@@ -1,14 +1,26 @@
+import re
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from decouple import config
 
-item = input('Item URL: ')
+item_url = input('Item URL: ')
+max_price = input('What is the max amount of money you would pay for this item?: ')
 driver = webdriver.Chrome(config('CHROME_DRIVER_PATH'))
-driver.get(item)
+driver.get(item_url)
 
 while True:
+    # Price Check ------------------------------------------------------------------------------------------------------
+    price_element = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, ".priceView-customer-price"))
+    )
+    if prices := re.search(r"\$\d+(?:\.\d+)?", price_element.text):
+        if prices[0][1:] > max_price:
+            raise Exception(f"Listed price '{prices[0]}' is greater than specified maximum price "
+                            f"'${'{:.2f}'.format(float(max_price))}'.")
+
     # Add to Cart ------------------------------------------------------------------------------------------------------
     try:
         add_to_cart_button = WebDriverWait(driver, 10).until(
@@ -58,4 +70,4 @@ while True:
     )
     place_order_button.click()
 
-    raise Exception(f"Bought: {item}")
+    raise Exception(f"Bought: {item_url}")
